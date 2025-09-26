@@ -33,20 +33,18 @@ func NewConnection(conn *net.TCPConn, connID uint32, handleApi ziface.HandlerFun
 }
 
 func (c *Connection) StartReader() {
-	fmt.Println("Reader Goroutine is running")
-	defer fmt.Println(c.Conn.RemoteAddr().String(), " conn reader exit")
 	defer c.Stop()
 
 	for {
 		buf := make([]byte, 512)
 		n, err := c.Conn.Read(buf)
 		if err != nil {
-			fmt.Printf("recv buf err: %v", err)
+			fmt.Printf("recv buf err: %v\n", err)
 			c.ExitChan <- struct{}{}
 			continue
 		}
 		if err := c.handleAPI(c.Conn, buf, n); err != nil {
-			fmt.Printf("connID %d handle err: %v", c.ConnID, err)
+			fmt.Printf("connID %d handle err: %v\n", c.ConnID, err)
 			c.ExitChan <- struct{}{}
 			return
 		}
