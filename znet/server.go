@@ -12,10 +12,7 @@ type Server struct {
 	IPVersion string
 	IP        string
 	Port      int
-}
-
-func (s *Server) CallBackHandler(conn *net.TCPConn, data []byte, n int) error {
-	
+	Router    ziface.IRouter
 }
 
 // 开启服务器
@@ -39,6 +36,8 @@ func (s *Server) Start() {
 
 		fmt.Printf("[START] Server %s listener at address: %s:%d\n", s.Name, s.IP, s.Port)
 
+		var cid uint32
+
 		// 接受客户端连接
 		for {
 			conn, err := listener.AcceptTCP()
@@ -47,23 +46,11 @@ func (s *Server) Start() {
 				continue
 			}
 
-			// 每连接一个客户端，创建一个goroutine处理
-			go func() {
-				// 不断从客户端获取数据
-				for {
-					buf := make([]byte, 512)
-					n, err := conn.Read(buf)
-					if err != nil {
-						fmt.Printf("recv buf err: %v\n", err)
-						return
-					}
-					// 回显功能
-					if _, err := conn.Write(buf[:n]); err != nil {
-						fmt.Printf("write back buf err: %v\n", err)
-						continue
-					}
-				}
-			}()
+			// 每连接一个客户端，为其创建一个Connection
+			connection := NewConnection(conn, cid, s.Router)
+			cid++
+
+			go connection.Start()
 
 		}
 
@@ -81,11 +68,16 @@ func (s *Server) Serve() {
 	}
 }
 
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
+}
+
 func NewServer(name string) ziface.IServer {
 	return &Server{
 		Name:      name,
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
 		Port:      3333,
+		Router:    nil,
 	}
 }
