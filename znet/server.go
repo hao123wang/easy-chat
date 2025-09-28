@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -13,16 +12,7 @@ type Server struct {
 	IPVersion string
 	IP        string
 	Port      int
-}
-
-// 回显处理：将客户端发送的内容原样返回
-func CallBackHandler(conn *net.TCPConn, data []byte, n int) error {
-	fmt.Println("Callback to client")
-	if _, err := conn.Write(data[:n]); err != nil {
-		fmt.Printf("Write back to client err: %v", err)
-		return errors.New("callback error")
-	}
-	return nil
+	Router    ziface.IRouter
 }
 
 // 开启服务器
@@ -57,9 +47,9 @@ func (s *Server) Start() {
 			}
 
 			// 每连接一个客户端，为其创建一个Connection
-			connection := NewConnection(conn, cid, CallBackHandler)
+			connection := NewConnection(conn, cid, s.Router)
 			cid++
-			
+
 			go connection.Start()
 
 		}
@@ -78,11 +68,16 @@ func (s *Server) Serve() {
 	}
 }
 
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
+}
+
 func NewServer(name string) ziface.IServer {
 	return &Server{
 		Name:      name,
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
 		Port:      3333,
+		Router:    nil,
 	}
 }

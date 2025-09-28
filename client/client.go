@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 func main() {
@@ -11,18 +14,28 @@ func main() {
 		fmt.Printf("client start err: %v\n", err)
 		return
 	}
+	defer conn.Close()
 
-	if _, err := conn.Write([]byte("你好，Zinx服务器")); err != nil {
-		fmt.Printf("conn write err: %v\n", err)
-		return
-	}
-
+	reader := bufio.NewReader(os.Stdin)
 	buf := make([]byte, 512)
-	n, err := conn.Read(buf)
-	if err != nil {
-		fmt.Printf("conn read err: %v\n", err)
-		return
-	}
-	fmt.Println(string(buf[:n]))
 
+	for {
+		str, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("read from terminal err: %v\n", err)
+			return
+		}
+		conn.Write([]byte(str))
+
+		go func() {
+			for {
+				n, err := conn.Read(buf)
+				if err != nil && err != io.EOF {
+					fmt.Printf("conn read err: %v\n", err)
+					return
+				}
+				fmt.Println(string(buf[:n]))
+			}
+		}()
+	}
 }
